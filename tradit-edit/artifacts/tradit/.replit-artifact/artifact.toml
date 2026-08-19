@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Tradit"
+description = "A community-centered footwear exchange where people trade in well-loved pairs for store credit and discover their next rotation at a better price."
+version = "1.0.0"
+id = "artifacts/tradit"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20626
+
+[services.development]
+run = "pnpm --filter @workspace/tradit run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tradit", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tradit/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20626"
+BASE_PATH = "/"

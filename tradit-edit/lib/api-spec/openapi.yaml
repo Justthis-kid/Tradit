@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: storefront
+    description: Tradit catalog and member dashboard
+  - name: trade-ins
+    description: Shoe trade-in scanning and offer decisions
+  - name: checkout
+    description: Demo checkout flow
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /products:
+    get:
+      operationId: listProducts
+      tags: [storefront]
+      summary: List available footwear
+      responses:
+        "200":
+          description: Available products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [storefront]
+      summary: Get the demo member dashboard
+      responses:
+        "200":
+          description: Member summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /credit:
+    get:
+      operationId: getCreditBalance
+      tags: [storefront]
+      summary: Get the demo member credit balance
+      responses:
+        "200":
+          description: Credit balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBalance"
+  /trade-ins/upload:
+    post:
+      operationId: uploadTradeIn
+      tags: [trade-ins]
+      summary: Upload and analyze a shoe photo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeInUpload"
+      responses:
+        "201":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeInAnalysis"
+        "409":
+          description: Duplicate image
+        "429":
+          description: Scan rate limit reached
+  /trade-ins/{id}/decision:
+    post:
+      operationId: decideTradeIn
+      tags: [trade-ins]
+      summary: Accept or decline a shoe credit offer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeInDecisionInput"
+      responses:
+        "200":
+          description: Decision result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeInSummary"
+  /checkout:
+    post:
+      operationId: createCheckout
+      tags: [checkout]
+      summary: Complete a demo purchase using credit and cash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutInput"
+      responses:
+        "201":
+          description: Confirmed order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Invalid cart or insufficient inventory
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Product:
+      type: object
+      required: [id, brand, name, category, sizeRange, color, price, originalPrice, imageUrl, description, availableSizes]
+      properties:
+        id: { type: string }
+        brand: { type: string }
+        name: { type: string }
+        category: { type: string }
+        sizeRange: { type: string }
+        color: { type: string }
+        price: { type: number }
+        originalPrice: { type: number }
+        imageUrl: { type: string }
+        badge: { type: ["string", "null"] }
+        description: { type: string }
+        availableSizes:
+          type: array
+          items: { type: string }
+    Activity:
+      type: object
+      required: [id, type, title, detail, createdAt]
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [trade_in, purchase, impact] }
+        title: { type: string }
+        detail: { type: string }
+        createdAt: { type: string }
+    Dashboard:
+      type: object
+      required: [creditBalance, scansThisHour, scansLimit, memberSince, pairsCirculated, recentActivity]
+      properties:
+        creditBalance: { type: number }
+        scansThisHour: { type: number }
+        scansLimit: { type: number }
+        memberSince: { type: string }
+        pairsCirculated: { type: number }
+        recentActivity:
+          type: array
+          items: { $ref: "#/components/schemas/Activity" }
+    CreditBalance:
+      type: object
+      required: [balance, pending, lifetimeEarned, lifetimeSpent]
+      properties:
+        balance: { type: number }
+        pending: { type: number }
+        lifetimeEarned: { type: number }
+        lifetimeSpent: { type: number }
+    TradeInUpload:
+      type: object
+      required: [imageName, imageData, mimeType]
+      properties:
+        imageName: { type: string, minLength: 1 }
+        imageData: { type: string, minLength: 1, maxLength: 4000000 }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+    TradeInAnalysis:
+      type: object
+      required: [id, status, brand, model, condition, estimatedValue, creditOffer, message]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [ready] }
+        brand: { type: string }
+        model: { type: string }
+        condition: { type: string }
+        estimatedValue: { type: number }
+        creditOffer: { type: number }
+        message: { type: string }
+    TradeInDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [accept, decline] }
+    TradeInSummary:
+      type: object
+      required: [id, decision, creditAdded, newBalance, message]
+      properties:
+        id: { type: string }
+        decision: { type: string, enum: [accepted, declined] }
+        creditAdded: { type: number }
+        newBalance: { type: number }
+        message: { type: string }
+    CheckoutItemInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId: { type: string }
+        quantity: { type: number, minimum: 1, maximum: 5 }
+    CheckoutInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/CheckoutItemInput" }
+    OrderItem:
+      type: object
+      required: [productId, name, quantity, unitPrice]
+      properties:
+        productId: { type: string }
+        name: { type: string }
+        quantity: { type: number }
+        unitPrice: { type: number }
+    Order:
+      type: object
+      required: [id, status, total, creditUsed, cashDue, items, createdAt]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [confirmed] }
+        total: { type: number }
+        creditUsed: { type: number }
+        cashDue: { type: number }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrderItem" }
+        createdAt: { type: string }
+

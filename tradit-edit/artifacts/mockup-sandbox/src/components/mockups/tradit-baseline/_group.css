@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --tradit-bg: #fffdf8;
+  --tradit-ink: #17130d;
+  --tradit-border: #ded6c8;
+  --tradit-muted: #eee8dc;
+  --tradit-gold: #f4b000;
+}
+
+.tradit-current {
+  font-family: 'Manrope', sans-serif;
+  background: var(--tradit-bg);
+  color: var(--tradit-ink);
+}
+
+.tradit-current .font-mono-brand { font-family: 'DM Mono', monospace; }
+.tradit-current .hero-surface {
+  background:
+    radial-gradient(circle at 78% 17%, rgb(244 176 0 / .19), transparent 33%),
+    radial-gradient(circle at 17% 95%, rgb(255 221 112 / .13), transparent 31%),
+    var(--tradit-ink);
+}
+.tradit-current .brand-mark {
+  position: relative;
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--tradit-gold);
+  color: var(--tradit-ink);
+  overflow: hidden;
+}
+.tradit-current .brand-mark::before,
+.tradit-current .brand-mark::after {
+  content: '';
+  position: absolute;
+  width: 15px;
+  height: 3px;
+  border-radius: 8px;
+  background: var(--tradit-ink);
+  transform: rotate(42deg);
+}
+.tradit-current .brand-mark::before { top: 10px; left: 8px; }
+.tradit-current .brand-mark::after { top: 17px; left: 11px; opacity: .7; }
+.tradit-current .brand-word { letter-spacing: -.055em; font-weight: 800; }
+.tradit-current .product-media { transition: transform .55s cubic-bezier(.2,.8,.2,1); }
+.tradit-current .product-card:hover .product-media { transform: scale(1.045) rotate(-1deg); }
+.tradit-current .hero-photo { height: 360px; overflow: hidden; border-radius: 4px; }
+.tradit-current .hero-photo img { height: 100%; width: 100%; object-fit: cover; filter: saturate(.8) contrast(1.05); }
+.tradit-current button { transition: transform .2s ease, background-color .2s ease; }
+.tradit-current button:active { transform: scale(.97); }
+.tradit-current .wallet-panel { scroll-margin-top: 90px; }
+@keyframes tradit-current-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.tradit-current .animate-rise { animation: tradit-current-rise .6s cubic-bezier(.2,.8,.2,1) both; }

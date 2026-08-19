@@ -1,0 +1,163 @@
+Build a complete web application that functions as an e‑commerce storefront for buying and selling shoes. The business model is similar to GameStop but for footwear: users submit photos of their used shoes, the system evaluates them using AI, assigns store credit, and the credit can be used to buy new discounted shoes.
+
+1. Tech Stack Requirements
+Frontend: HTML, CSS, JavaScript
+
+Backend: Node.js + Express
+
+Database: JSON or lightweight DB (e.g., SQLite)
+
+AI Integration: Use a placeholder API function for shoe‑image analysis (brand, model, condition).
+
+Image Handling: Temporary upload endpoint + client‑side preview
+
+Rate Limiting: Prevent spam and excessive AI usage
+
+File Structure:
+
+/public/index.html
+
+/public/styles.css
+
+/public/app.js
+
+/server.js
+
+/routes/upload.js
+
+/routes/store.js
+
+/ai/shoeScan.js (mock AI module)
+
+/data/shoes.json
+
+/data/users.json
+
+2. Core Features
+A. User Shoe Submission System
+Users upload a photo of their shoe.
+
+The backend stores the image temporarily.
+
+The AI module analyzes:
+
+Brand (Nike, Adidas, etc.)
+
+Model/type (Air Force 1, Dunk, Yeezy, etc.)
+
+Condition (new, lightly worn, worn, damaged)
+
+The system returns:
+
+Estimated resale value
+
+Store credit amount
+
+Users can accept or decline the offer.
+
+B. Storefront for Buying New Shoes
+Display catalog of new shoes with discounted prices.
+
+Users can purchase using store credit + cash.
+
+Shopping cart + checkout flow.
+
+C. Anti‑Spam & Rate Limiting
+Limit shoe‑scan submissions per user per hour.
+
+Block repeated uploads of identical images.
+
+Queue requests so AI scans don’t overload the server.
+
+Return friendly error messages when limits are hit.
+
+3. AI Shoe‑Scan Module Requirements
+Create a file /ai/shoeScan.js with a mock function:
+
+js
+async function analyzeShoeImage(imagePath) {
+  // Placeholder AI logic
+  return {
+    brand: "Nike",
+    model: "Air Force 1",
+    condition: "Lightly Worn",
+    estimatedValue: 45,
+    creditOffer: 30
+  };
+}
+module.exports = analyzeShoeImage;
+Replit should structure the code so this module can later be replaced with a real AI API.
+
+4. User Flow
+Step 1: Upload Shoe Photo
+User clicks “Submit Your Shoes”
+
+Upload form appears
+
+Client-side preview of the image
+
+Submit triggers backend upload + AI scan
+
+Step 2: AI Evaluation
+Show results:
+
+Brand
+
+Model
+
+Condition
+
+Estimated resale value
+
+Store credit offer
+
+User chooses:
+
+Accept credit → credit added to account
+
+Decline → image deleted
+
+Step 3: Buy New Shoes
+User browses catalog
+
+Adds items to cart
+
+Checkout uses store credit + payment
+
+5. UI/UX Requirements
+Clean, modern storefront layout
+
+Shoe submission page with drag‑and‑drop upload
+
+Dashboard showing user credit balance
+
+Product cards with images, prices, and “Buy with Credit” button
+
+Responsive design for mobile
+
+6. Security & Performance
+Rate limiting middleware
+
+Validate image file types
+
+Auto-delete temporary uploads after processing
+
+Prevent duplicate submissions
+
+Sanitize all user inputs
+
+Use async/await for non-blocking operations
+
+7. Code Quality Requirements
+Modular JS (no giant files)
+
+Commented functions
+
+Clear separation of concerns
+
+Reusable UI components
+
+Easy to modify product catalog and AI logic
+
+8. Final Instruction to Replit
+Generate all necessary files, boilerplate, routes, UI, and placeholder AI logic so the app runs immediately on Replit. Ensure the code is clean, modular, and ready for future expansion.
