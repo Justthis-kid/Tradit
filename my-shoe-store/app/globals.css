@@ -1,0 +1,83 @@
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f172a;
+    color: #e5e7eb;
+}
+
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+}
+
+h1,
+h2 {
+    margin-bottom: 0.5rem;
+}
+
+.card {
+    background: #1f2937;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #374151;
+}
+
+button {
+    background: #22c55e;
+    color: #022c22;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+button:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+}
+
+input[type="file"] {
+    margin-top: 0.5rem;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.product-card {
+    background: #111827;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border: 1px solid #374151;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: #0ea5e9;
+    color: #0b1120;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.flex {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.credit-pill {
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    background: #22c55e;
+    color: #022c22;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
