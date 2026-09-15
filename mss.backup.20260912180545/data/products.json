@@ -1,0 +1,47 @@
+[
+  {
+    "id": "mariner-86",
+    "name": "Mariner 86 High",
+    "detail": "Cream / rust canvas",
+    "price": 138,
+    "size": "8.5",
+    "condition": "Very good",
+    "story": "Worn for one summer on the coast. The patina is the point.",
+    "image": "/images/editorial-shoe.jpg",
+    "category": "High-tops",
+    "isNew": true
+  },
+  {
+    "id": "silver-pace",
+    "name": "Pace Runner 04",
+    "detail": "Silver mesh / poppy",
+    "price": 92,
+    "size": "7",
+    "condition": "Excellent",
+    "story": "A barely-run pair from a collector who prefers the next colorway.",
+    "image": "/images/runner-silver.jpg",
+    "category": "Runners"
+  },
+  {
+    "id": "night-shift",
+    "name": "Night Shift Loafer",
+    "detail": "Polished leather / gold",
+    "price": 178,
+    "size": "9",
+    "condition": "Good",
+    "story": "Found in a tiny Lisbon shop. Soft leather, serious sole.",
+    "image": "/images/loafers-black.jpg",
+    "category": "Loafers"
+  },
+  {
+    "id": "court-side",
+    "name": "Court Side 73",
+    "detail": "Bone / forest / ochre",
+    "price": 116,
+    "size": "8",
+    "condition": "Very good",
+    "story": "A daily pair that got better with every city block.",
+    "image": "/images/court-white.jpg",
+    "category": "Low-tops"
+  }
+]

@@ -1,65 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ProductGrid from "../components/ProductGrid";
 
-export default function Page() {
-  const [fileName, setFileName] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+export default function HomePage() {
+  const [products, setProducts] = useState([]);
 
-  async function handleFile(e) {
-    setError("");
-    setResult(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
+  useEffect(() => {
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then(setProducts);
+  }, []);
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result.split(",")[1];
-      setLoading(true);
-      try {
-        const res = await fetch("/api/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64 })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data?.error || "Scan failed");
-        } else {
-          setResult(data);
-        }
-      } catch (err) {
-        setError(err.message || "Network error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+  function addToBag(product) {
+    const bag = JSON.parse(localStorage.getItem("bag") || "[]");
+    bag.push(product);
+    localStorage.setItem("bag", JSON.stringify(bag));
+    window.dispatchEvent(new Event("storage"));
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: "system-ui, sans-serif" }}>
-      <h1>AI Shoe Scan</h1>
-      <p>Upload a shoe photo and get a short AI analysis.</p>
+    <>
+      <section className="home-hero">
+        <div className="home-copy">
+          <h1 className="home-title serif">
+            Good shoes<br />
+            <em>go places.</em>
+          </h1>
+          <p className="home-intro">
+            The considered marketplace for pairs with more life in them.
+          </p>
+          <div className="button-row">
+            <a className="button button-dark" href="/shop">Shop the archive</a>
+            <a className="button button-light" href="/evaluate">Evaluate a pair</a>
+          </div>
+        </div>
 
-      <input type="file" accept="image/*" onChange={handleFile} />
-      {fileName && <div>Selected file: {fileName}</div>}
+        <div className="hero-image-wrap">
+          <img className="hero-image" src="/editorial-shoe.jpg" />
+          <div className="hero-label">
+            <p className="eyebrow">Condition checked</p>
+          </div>
+          <div className="hero-new">
+            <span></span>New arrivals
+          </div>
+        </div>
+      </section>
 
-      {loading && <div>Scanning…</div>}
+      <section className="section">
+        <div className="section-heading">
+          <h2 className="serif">Trending</h2>
+          <p className="eyebrow">Fresh from the archive</p>
+        </div>
 
-      {error && <div style={{ color: "red" }}>{error}</div>}
-
-      {result && (
-        <section style={{ marginTop: 16 }}>
-          <h2>Scan Result</h2>
-          <pre style={{ whiteSpace: "pre-wrap", background: "#f6f6f6", padding: 12 }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
-        </section>
-      )}
-    </main>
+        <ProductGrid products={products} onAdd={addToBag} />
+      </section>
+    </>
   );
 }
