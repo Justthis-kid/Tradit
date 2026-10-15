@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ProductGrid from "../../components/ProductGrid";
+import { addToCart } from "../../lib/cart";
 
 export default function ShopPage() {
   const [products, setProducts] = useState([]);
@@ -32,13 +33,6 @@ export default function ShopPage() {
     if (sort === "Price: high to low") return b.price - a.price;
     return 0;
   });
-
-  function addToBag(product) {
-    const bag = JSON.parse(localStorage.getItem("bag") || "[]");
-    bag.push(product);
-    localStorage.setItem("bag", JSON.stringify(bag));
-    window.dispatchEvent(new Event("storage"));
-  }
 
   return (
     <>
@@ -97,7 +91,7 @@ export default function ShopPage() {
       </div>
 
       {sorted.length > 0 ? (
-        <ProductGrid products={sorted} onAdd={addToBag} />
+        <ProductGrid products={sorted} onAdd={addToCart} />
       ) : (
         <div className="empty-state">
           <h2 className="serif">No pair by that name.</h2>

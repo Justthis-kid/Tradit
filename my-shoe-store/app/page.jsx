@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ProductGrid from "../components/ProductGrid";
+import { addToCart } from "../lib/cart";
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -11,13 +12,6 @@ export default function HomePage() {
       .then((r) => r.json())
       .then(setProducts);
   }, []);
-
-  function addToBag(product) {
-    const bag = JSON.parse(localStorage.getItem("bag") || "[]");
-    bag.push(product);
-    localStorage.setItem("bag", JSON.stringify(bag));
-    window.dispatchEvent(new Event("storage"));
-  }
 
   return (
     <>
@@ -53,7 +47,7 @@ export default function HomePage() {
           <p className="eyebrow">Fresh from the archive</p>
         </div>
 
-        <ProductGrid products={products} onAdd={addToBag} />
+        <ProductGrid products={products} onAdd={addToCart} />
       </section>
     </>
   );

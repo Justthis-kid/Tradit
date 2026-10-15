@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { addToCart } from "../../../lib/cart";
 
 export default function ProductPage({ params }) {
   const { id } = params;
@@ -15,13 +16,6 @@ export default function ProductPage({ params }) {
   }, [id]);
 
   if (!product) return <div style={{ padding: 24 }}>Loading…</div>;
-
-  function addToBag() {
-    const bag = JSON.parse(localStorage.getItem("bag") || "[]");
-    bag.push(product);
-    localStorage.setItem("bag", JSON.stringify(bag));
-    window.dispatchEvent(new Event("storage"));
-  }
 
   return (
     <div style={{ padding: 24 }}>
@@ -47,7 +41,7 @@ export default function ProductPage({ params }) {
           <p className="product-story">{product.story}</p>
 
           <div className="button-row" style={{ marginTop: 24 }}>
-            <button className="button button-dark" onClick={addToBag}>
+            <button className="button button-dark" onClick={() => addToCart(product)}>
               Add to bag
             </button>
 

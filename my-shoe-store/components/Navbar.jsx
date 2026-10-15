@@ -3,16 +3,26 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { CART_UPDATED_EVENT, readCart } from "../lib/cart";
 
 export default function Navbar() {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    const c = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCount(c.length);
-    const onStorage = () => setCount(JSON.parse(localStorage.getItem("cart") || "[]").length);
+    const onStorage = () => {
+      try {
+        setCount(readCart().reduce((count, item) => count + item.qty, 0));
+      } catch {
+        setCount(0);
+      }
+    };
+    onStorage();
+    window.addEventListener(CART_UPDATED_EVENT, onStorage);
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(CART_UPDATED_EVENT, onStorage);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   return (

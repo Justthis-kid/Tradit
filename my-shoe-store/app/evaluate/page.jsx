@@ -193,7 +193,7 @@ export default function EvaluatePage() {
           <p className="evaluator-note">
             <span>🛡️</span>
             <span>
-              Your photos stay in this browser. This is a considered estimate, not a promise.
+              Your photo is sent to our AI provider for analysis. This is a considered estimate, not a promise.
             </span>
           </p>
         </div>

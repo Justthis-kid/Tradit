@@ -30,7 +30,7 @@ function analyzeTextForMetadata(text) {
   else if (lower.includes("worn") || lower.includes("heavily used")) metadata.condition = "Worn";
 
   // Trend keywords
-  const trendBoosters = ["Rare","Limited","Collab","Exclusive","Trending","Popular","Viral","Hype","Retro","Vintage","Iconic"];
+  const trendBoosters = ["rare","limited","collab","exclusive","trending","popular","viral","hype","retro","vintage","iconic"];
   for (const kw of trendBoosters) {
     if (lower.includes(kw)) metadata.trendingScore += 8;
   }
@@ -89,10 +89,10 @@ export async function POST(req) {
     // Condition multiplier
     let conditionMultiplier = 0.15; // default 15% of price
     const cond = (metaFromAI.condition || "").toLowerCase();
-    if (cond.includes("New") || cond.includes("Excellent")) conditionMultiplier = 0.35;
-    else if (cond.includes("Good")) conditionMultiplier = 0.25;
-    else if (cond.includes("Fair")) conditionMultiplier = 0.18;
-    else if (cond.includes("Worn")) conditionMultiplier = 0.10;
+    if (cond.includes("new") || cond.includes("excellent")) conditionMultiplier = 0.35;
+    else if (cond.includes("good")) conditionMultiplier = 0.25;
+    else if (cond.includes("fair")) conditionMultiplier = 0.18;
+    else if (cond.includes("worn")) conditionMultiplier = 0.10;
 
     // Trend multiplier: scale trendingScore 0-100 to 0.5 -> 1.5 multiplier
     const trendMultiplier = 0.5 + (trendingScore / 100) * 1.0; // between 0.5 and 1.5

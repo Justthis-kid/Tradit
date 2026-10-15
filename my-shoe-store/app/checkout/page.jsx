@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readCart } from "../../lib/cart";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState([]);
@@ -11,7 +12,11 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setCart(JSON.parse(localStorage.getItem("cart") || "[]"));
+    try {
+      setCart(readCart());
+    } catch (cartError) {
+      setError(cartError.message);
+    }
   }, []);
 
   // Compute cart total helper
