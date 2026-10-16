@@ -67,3 +67,5 @@ export default function CreditPage() {
         </p>
       </div>
     </section>
+  );
+}
