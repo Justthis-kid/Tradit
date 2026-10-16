@@ -93,7 +93,7 @@ export default function CartPage() {
             </div>
             <p>Shipping and any applicable taxes are shown at checkout.</p>
             <Link className="button button-dark" href="/checkout">Continue to checkout</Link>
-          </div>
+          </aside>
         </div>
       )}
     </section>
