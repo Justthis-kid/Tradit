@@ -66,8 +66,9 @@ export default function ShopPage() {
 
         <div className="shop-controls">
           <label className="field-control">
-            🔍
+            <span aria-hidden="true">🔍</span>
             <input
+              aria-label="Search the archive"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search the archive"
@@ -75,8 +76,8 @@ export default function ShopPage() {
           </label>
 
           <label className="field-control">
-            ⚙️
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <span aria-hidden="true">⚙️</span>
+            <select aria-label="Sort products" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option>Featured</option>
               <option>Price: low to high</option>
               <option>Price: high to low</option>

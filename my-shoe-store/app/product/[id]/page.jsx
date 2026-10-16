@@ -45,8 +45,8 @@ export default function ProductPage({ params }) {
               Add to bag
             </button>
 
-            <a href="/evaluate">
-              <button className="button">Evaluate a pair</button>
+            <a className="button" href="/evaluate">
+              Evaluate a pair
             </a>
           </div>
         </div>
