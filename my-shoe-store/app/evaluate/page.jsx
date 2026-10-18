@@ -3,53 +3,62 @@
 import { useState } from "react";
 
 export default function EvaluatePage() {
-  const [status, setStatus] = useState("idle"); // idle | analyzing | complete | error
+  const [status, setStatus] = useState("idle");
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
-
   const referencePrice = 100;
 
-  async function handleFileChange(e) {
+  function handleFileChange(event) {
     setError("");
     setResult(null);
-    const file = e.target.files?.[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     setFileName(file.name);
     setStatus("analyzing");
 
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64 = reader.result.split(",")[1];
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setError("We couldn't read that photo. Please choose another image.");
+      setStatus("error");
+    };
+    reader.onload = async () => {
+      if (typeof reader.result !== "string") {
+        setError("We couldn't read that photo. Please choose another image.");
+        setStatus("error");
+        return;
+      }
 
-          const res = await fetch("/api/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageBase64: base64, referencePrice })
-          });
+      try {
+        const response = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64: reader.result.split(",")[1],
+            referencePrice,
+          }),
+        });
+        const data = await response.json();
 
-          const data = await res.json();
-
-          if (!res.ok) {
-            setError(data?.error || "Scan failed");
-            setStatus("error");
-            setResult(null);
-          } else {
-            setResult(data);
-            setStatus("complete");
-          }
-        } catch (err) {
-          setError(err?.message || "Network error");
+        if (!response.ok) {
+          setError(data?.error || "The evaluation couldn't be completed. Please try again.");
           setStatus("error");
+          return;
         }
-      };
 
+        setResult(data);
+        setStatus("complete");
+      } catch (requestError) {
+        setError(requestError?.message || "Network error. Please try again.");
+        setStatus("error");
+      }
+    };
+
+    try {
       reader.readAsDataURL(file);
-    } catch (err) {
-      setError(err?.message || "File read error");
+    } catch (readError) {
+      setError(readError?.message || "We couldn't read that photo. Please try another image.");
       setStatus("error");
     }
   }
@@ -63,139 +72,172 @@ export default function EvaluatePage() {
 
   return (
     <main className="page-enter">
-      <section className="container evaluate-layout">
+      <section className="evaluate-layout container">
         <div className="evaluate-copy">
-          <p className="eyebrow" style={{ color: "var(--gold-dark)" }}>
-            The evaluator / private beta
-          </p>
-          <h1 className="serif page-title" style={{ marginTop: 20 }}>
-            Know what<br />
+          <p className="eyebrow evaluate-eyebrow">The evaluator / private beta</p>
+          <h1 className="serif page-title">
+            <span className="evaluate-title-line">Know what</span><br />
             <em>you have.</em>
           </h1>
-          <p>
-            Give us a few clear photos. Our local evaluator reads the details that decide a pair’s
-            place in the archive.
+          <p className="evaluate-intro">
+            Every pair has a story. Get a thoughtful first read on its make, condition, and
+            next chapter in the archive.
           </p>
-          <div className="steps">
-            <div>
-              <span className="eyebrow" style={{ color: "var(--gold-dark)" }}>01</span>
-              <p>Upload a photo</p>
+
+          <div className="steps" aria-label="How evaluation works">
+            <div className="evaluate-step">
+              <span className="eyebrow">01</span>
+              <p>Share a photo</p>
             </div>
-            <div>
-              <span className="eyebrow" style={{ color: "var(--gold-dark)" }}>02</span>
-              <p>Get a read</p>
+            <div className="evaluate-step">
+              <span className="eyebrow">02</span>
+              <p>Get your read</p>
             </div>
-            <div>
-              <span className="eyebrow" style={{ color: "var(--gold-dark)" }}>03</span>
-              <p>Choose a next step</p>
+            <div className="evaluate-step">
+              <span className="eyebrow">03</span>
+              <p>Choose next steps</p>
             </div>
           </div>
+
+          <p className="evaluate-side-note">
+            <span aria-hidden="true">✳</span>
+            A useful estimate, made with a human eye in mind.
+          </p>
         </div>
 
-        <div className="evaluator">
-          <div className="evaluator-head">
-            <p>Start with one clear view</p>
-            <span className="eyebrow" style={{ color: "var(--ink-soft)" }}>jpg · png · heic</span>
-          </div>
-
-          {status === "idle" && (
-            <label className="dropzone">
-              <input
-                id="shoe-file"
-                className="sr-only"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
-              <span className="drop-icon">📷</span>
-              <h2 className="serif">Drop your shoe here</h2>
-              <p>Or click to browse. A daylight photo from the side works best.</p>
-              <span className="file-label">Choose photo</span>
-            </label>
-          )}
-
-          {status === "analyzing" && (
-            <div className="analyzing">
-              <span className="loading-icon">✨</span>
-              <p className="eyebrow" style={{ color: "var(--gold)", marginTop: 32 }}>
-                Reading {fileName}
-              </p>
-              <h2 className="serif">Looking closely...</h2>
-              <div className="analysis-list">
-                <div><i></i>Silhouette and construction</div>
-                <div><i></i>Wear pattern and condition</div>
-                <div><i></i>Archive comparables</div>
+        <div className="evaluator-wrap">
+          <section className="evaluator" aria-label="Shoe evaluation">
+            <div className="evaluator-head">
+              <div>
+                <p className="eyebrow">Tradits / first look</p>
+                <h2 className="serif">The shoe, up close.</h2>
               </div>
+              <span className="evaluator-counter">01 <i>/</i> 01</span>
             </div>
-          )}
 
-          {status === "error" && (
-            <div className="analysis-result" style={{ background: "var(--paper-card)", color: "var(--ink)" }}>
-              <h2 className="serif">Scan error</h2>
-              <p style={{ color: "var(--ink-soft)", marginTop: 12 }}>{error}</p>
-              <button className="button" style={{ marginTop: 16 }} onClick={reset}>
-                Try again
-              </button>
-            </div>
-          )}
+            {status === "idle" && (
+              <label className="dropzone" htmlFor="shoe-file">
+                <input
+                  id="shoe-file"
+                  className="sr-only"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  aria-describedby="upload-guidance"
+                />
+                <span className="drop-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none">
+                    <path d="M5 10.5h5l2-3h8l2 3h5v14H5v-14Z" />
+                    <circle cx="16" cy="17" r="4.5" />
+                    <path d="M23.5 14h.01" />
+                  </svg>
+                </span>
+                <span className="dropzone-kicker eyebrow">A good pair deserves a good portrait</span>
+                <span className="dropzone-title serif">Start with one clear view.</span>
+                <span id="upload-guidance" className="dropzone-copy">
+                  Choose a well-lit photo of the whole shoe, taken from the side.
+                </span>
+                <span className="button button-gold file-label">Choose a photo <span aria-hidden="true">↗</span></span>
+                <span className="dropzone-footnote">Your image is only used to create this estimate.</span>
+              </label>
+            )}
 
-          {status === "complete" && result && (
-            <div className="analysis-result">
-              <div className="analysis-head">
-                <div>
-                  <p className="eyebrow" style={{ color: "var(--gold)" }}>
-                    Read complete / {fileName}
-                  </p>
-                  <h2 className="serif">
-                    A strong<br />
-                    <em>second act.</em>
-                  </h2>
-                </div>
-                <span style={{ color: "var(--gold)" }}>✔️</span>
-              </div>
-
-              <div className="analysis-grid">
-                <div>
-                  <p className="label">Likely type</p>
-                  <p className="value">{result.brand || "Classic court low"}</p>
-                </div>
-                <div>
-                  <p className="label">Condition read</p>
-                  <p className="value">
-                    {result.condition || "Very good · 8.2/10"}
-                  </p>
-                </div>
-                <div>
-                  <p className="label">Exchange range</p>
-                  <p className="value gold">
-                    {result.returnValue
-                      ? `$${Number(result.returnValue).toFixed(2)}`
-                      : "$90 – $125"}
-                  </p>
+            {status === "analyzing" && (
+              <div className="analyzing" role="status" aria-live="polite">
+                <div className="analysis-orbit" aria-hidden="true"><span>✳</span></div>
+                <p className="eyebrow">Reading / {fileName}</p>
+                <h2 className="serif">Looking closely.</h2>
+                <p className="analyzing-copy">Taking in the details that give this pair its character.</p>
+                <div className="analysis-list">
+                  <div><i></i>Silhouette and construction</div>
+                  <div><i></i>Wear pattern and condition</div>
+                  <div><i></i>Archive comparables</div>
                 </div>
               </div>
+            )}
 
-              <div className="button-row">
-                <a className="button button-gold" href="/credit">
-                  See your credit options
-                </a>
-                <button
-                  className="button"
-                  style={{ color: "var(--paper)", borderColor: "#5c554c" }}
-                  onClick={reset}
-                >
-                  Evaluate another pair
-                </button>
+            {status === "error" && (
+              <div className="analysis-error" role="alert">
+                <span className="eyebrow">A small pause</span>
+                <h2 className="serif">We couldn't finish the read.</h2>
+                <p>{error}</p>
+                <button className="button button-gold" onClick={reset}>Try another photo</button>
               </div>
-            </div>
-          )}
+            )}
+
+            {status === "complete" && result && (
+              <div className="analysis-result" aria-live="polite">
+                <div className="analysis-head">
+                  <div>
+                    <p className="eyebrow">Read complete / {fileName}</p>
+                    <h2 className="serif">A new chapter<br /><em>starts here.</em></h2>
+                  </div>
+                  <span className="analysis-check" aria-label="Evaluation complete">✓</span>
+                </div>
+
+                <dl className="analysis-grid">
+                  <div>
+                    <dt>Brand</dt>
+                    <dd>{result.brand || "Not identified"}</dd>
+                  </div>
+                  <div>
+                    <dt>Model</dt>
+                    <dd>{result.model || "Not identified"}</dd>
+                  </div>
+                  <div>
+                    <dt>Condition read</dt>
+                    <dd>{result.condition || "Not identified"}</dd>
+                  </div>
+                  <div className="analysis-offer">
+                    <dt>Estimated offer</dt>
+                    <dd>
+                      {result.returnValue != null && Number.isFinite(Number(result.returnValue))
+                        ? `$${Number(result.returnValue).toFixed(2)}`
+                        : "Unavailable"}
+                    </dd>
+                  </div>
+                </dl>
+
+                {result.notable && <p className="analysis-note">{result.notable}</p>}
+
+                <div className="button-row">
+                  <a className="button button-gold" href="/credit">Explore store credit</a>
+                  <button className="button button-light" onClick={reset}>Evaluate another pair</button>
+                </div>
+              </div>
+            )}
+          </section>
 
           <p className="evaluator-note">
-            <span>🛡️</span>
-            <span>
-              Your photo is sent to our AI provider for analysis. This is a considered estimate, not a promise.
-            </span>
+            <span aria-hidden="true">✳</span>
+            Your photo is sent to our AI provider for analysis. This is a considered estimate, not a promise.
           </p>
+        </div>
+      </section>
+
+      <section className="evaluate-guide">
+        <div className="container">
+          <div className="evaluate-guide-heading">
+            <p className="eyebrow">A few things worth knowing</p>
+            <h2 className="serif">The details make<br /><em>the difference.</em></h2>
+          </div>
+          <div className="evaluate-guide-grid">
+            <article>
+              <span className="eyebrow">01 / Light</span>
+              <h3 className="serif">Find the daylight.</h3>
+              <p>Natural light brings out the real color and texture of the materials.</p>
+            </article>
+            <article>
+              <span className="eyebrow">02 / Angle</span>
+              <h3 className="serif">Show the whole pair.</h3>
+              <p>A clear side view helps us see the shape, sole, and overall condition.</p>
+            </article>
+            <article>
+              <span className="eyebrow">03 / Honesty</span>
+              <h3 className="serif">Let wear tell its story.</h3>
+              <p>Keep scuffs and creases in frame for a more useful, realistic estimate.</p>
+            </article>
+          </div>
         </div>
       </section>
     </main>
