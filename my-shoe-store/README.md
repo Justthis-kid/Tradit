@@ -4,7 +4,7 @@ Tradits is a Next.js footwear resale storefront. The current catalog is a local 
 
 ## Local development
 
-Requirements: Node.js 20 or newer and npm.
+Requirements: Node.js 20.9 or newer and npm (matching the Next.js runtime requirement).
 
 1. Copy `.env.example` to `.env.local`.
 2. Add a Google Gemini API key to `GEMINI_API_KEY` if you want to use shoe evaluation.
@@ -29,7 +29,7 @@ npm start
 This repository contains the app in the `my-shoe-store` subdirectory. To deploy from GitHub:
 
 1. Import the repository in Vercel and select `my-shoe-store` as the **Root Directory**.
-2. Use the detected Next.js framework settings. The checked-in `vercel.json` uses `npm ci` and `npm run build`.
+2. Use the detected Next.js framework settings. The checked-in `vercel.json` uses `npm ci` and `npm run build`; `package.json` declares Node.js 20.9 or newer.
 3. Add `GEMINI_API_KEY` to Vercel Project Settings → Environment Variables for the environments where shoe evaluation should be enabled. Keep it server-side; do not prefix it with `NEXT_PUBLIC_`.
 4. Deploy the project. Subsequent pushes to the connected Git branch will trigger deployments.
 
