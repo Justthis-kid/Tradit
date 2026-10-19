@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { readCart } from "../../lib/cart";
-import { addStoreCredit } from "../../lib/store-credit";
+import { readShoePhoto } from "../../lib/shoe-scan-client";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState([]);
@@ -31,53 +31,25 @@ export default function CheckoutPage() {
     if (!file) return;
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result.split(",")[1];
-      setLoading(true);
-      try {
-        // Send price along so API can compute return value (use total as reference)
-        const res = await fetch("/api/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageBase64: base64,
-            mimeType: file.type,
-            referencePrice: total || 100
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data?.error || "Scan failed");
-        } else {
-          setScanResult(data);
-        }
-      } catch (err) {
-        setError(err.message || "Network error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function acceptOffer() {
-    if (!scanResult?.returnValue) {
-      alert("No offer to accept");
-      return;
-    }
-    // Store credit flow: save to localStorage as 'storeCredit'
-    let credit;
+    setLoading(true);
     try {
-      credit = addStoreCredit(scanResult.returnValue);
-    } catch (creditError) {
-      setError(creditError.message);
-      return;
+      const imageBase64 = await readShoePhoto(file);
+      const response = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64, mimeType: file.type }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(data?.error || "The photo assessment couldn't be completed. Please try again.");
+      } else {
+        setScanResult(data);
+      }
+    } catch (scanError) {
+      setError(scanError?.message || "Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    // Clear cart as demo
-    localStorage.removeItem("cart");
-    alert(`Offer accepted. Store credit: $${credit.toFixed(2)}. Use it to buy on Tradit.`);
-    window.location.href = "/";
   }
 
   return (
@@ -88,7 +60,7 @@ export default function CheckoutPage() {
           <h1 className="serif page-title">Your next <em>move.</em></h1>
         </div>
         <p className="page-top-note">
-          Review your selection or explore a conditional trade-in estimate for a pair of your own.
+          Review your saved selection or get a photo-based identification for a pair of your own.
         </p>
       </header>
 
@@ -123,7 +95,9 @@ export default function CheckoutPage() {
             <span>Subtotal</span>
             <strong>${total.toFixed(2)}</strong>
           </div>
-          <p className="checkout-fineprint">Shipping and applicable taxes are calculated at checkout.</p>
+          <p className="checkout-fineprint">
+            This demo cart does not place orders or process payments. Prices and totals are not verified by a checkout service.
+          </p>
         </section>
 
         <section className="checkout-tradein">
@@ -132,8 +106,7 @@ export default function CheckoutPage() {
             <h2 className="serif">Explore its next chapter.</h2>
           </div>
           <p className="checkout-intro">
-            Share a clear photo for a first look at the brand, model, visible condition, and a
-            conditional store-credit estimate.
+            Share a clear photo for an AI-assisted first look at the brand, model, and visible condition.
           </p>
           <label className="checkout-upload" htmlFor="checkout-shoe-file">
             <span className="eyebrow">Choose a shoe photo</span>
@@ -152,20 +125,25 @@ export default function CheckoutPage() {
           {loading && <p className="checkout-status" role="status" aria-live="polite">Taking a closer look…</p>}
 
           {scanResult && (
-            <div className="checkout-evaluation">
-              <p className="eyebrow">First look / estimate</p>
-              <dl>
-                <div><dt>Brand name</dt><dd>{scanResult.brand}</dd></div>
-                <div><dt>Model name</dt><dd>{scanResult.model}</dd></div>
-                <div><dt>Condition</dt><dd>{scanResult.condition}</dd></div>
-                <div><dt>Estimated store credit</dt><dd>${Number(scanResult.returnValue).toFixed(2)}</dd></div>
-              </dl>
-              <p className="checkout-fineprint">
-                This photo-based estimate is conditional and is not a final authentication or payout offer.
-              </p>
-              <button className="button button-gold" onClick={acceptOffer}>
-                Accept estimate
-              </button>
+            <div className="checkout-evaluation" aria-live="polite">
+              {scanResult.isFootwear ? (
+                <>
+                  <p className="eyebrow">Photo assessment</p>
+                  <dl>
+                    <div><dt>Brand name</dt><dd>{scanResult.brand}</dd></div>
+                    <div><dt>Model name</dt><dd>{scanResult.model}</dd></div>
+                    <div><dt>Condition</dt><dd>{scanResult.condition}</dd></div>
+                  </dl>
+                  <p className="checkout-fineprint">
+                    This automated assessment is not a final authentication, valuation, or payout offer.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="eyebrow">Not footwear</p>
+                  <p role="status">{scanResult.message}</p>
+                </>
+              )}
             </div>
           )}
         </section>

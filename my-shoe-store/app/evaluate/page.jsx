@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { readShoePhoto } from "../../lib/shoe-scan-client";
 
 export default function EvaluatePage() {
   const [status, setStatus] = useState("idle");
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
-  const referencePrice = 100;
-
-  function handleFileChange(event) {
+  async function handleFileChange(event) {
     setError("");
     setResult(null);
     const file = event.target.files?.[0];
@@ -18,48 +17,25 @@ export default function EvaluatePage() {
     setFileName(file.name);
     setStatus("analyzing");
 
-    const reader = new FileReader();
-    reader.onerror = () => {
-      setError("We couldn't read that photo. Please choose another image.");
-      setStatus("error");
-    };
-    reader.onload = async () => {
-      if (typeof reader.result !== "string") {
-        setError("We couldn't read that photo. Please choose another image.");
+    try {
+      const imageBase64 = await readShoePhoto(file);
+      const response = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64, mimeType: file.type }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setError(data?.error || "The evaluation couldn't be completed. Please try again.");
         setStatus("error");
         return;
       }
 
-      try {
-        const response = await fetch("/api/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageBase64: reader.result.split(",")[1],
-            mimeType: file.type,
-            referencePrice,
-          }),
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(data?.error || "The evaluation couldn't be completed. Please try again.");
-          setStatus("error");
-          return;
-        }
-
-        setResult(data);
-        setStatus("complete");
-      } catch (requestError) {
-        setError(requestError?.message || "Network error. Please try again.");
-        setStatus("error");
-      }
-    };
-
-    try {
-      reader.readAsDataURL(file);
-    } catch (readError) {
-      setError(readError?.message || "We couldn't read that photo. Please try another image.");
+      setResult(data);
+      setStatus("complete");
+    } catch (requestError) {
+      setError(requestError?.message || "Network error. Please try again.");
       setStatus("error");
     }
   }
@@ -102,7 +78,7 @@ export default function EvaluatePage() {
 
           <p className="evaluate-side-note">
             <span aria-hidden="true">✳</span>
-            A useful estimate, made with a human eye in mind.
+            A considered first look, not a human authentication.
           </p>
         </div>
 
@@ -139,7 +115,7 @@ export default function EvaluatePage() {
                   Choose a well-lit photo of the whole shoe, taken from the side.
                 </span>
                 <span className="button button-gold file-label">Choose a photo <span aria-hidden="true">↗</span></span>
-                <span className="dropzone-footnote">Your image is only used to create this estimate.</span>
+                <span className="dropzone-footnote">Your photo is processed for identification and is not stored by Tradits.</span>
               </label>
             )}
 
@@ -152,7 +128,7 @@ export default function EvaluatePage() {
                 <div className="analysis-list">
                   <div><i></i>Silhouette and construction</div>
                   <div><i></i>Wear pattern and condition</div>
-                  <div><i></i>Archive comparables</div>
+                  <div><i></i>Visible details and condition</div>
                 </div>
               </div>
             )}
@@ -160,7 +136,7 @@ export default function EvaluatePage() {
             {status === "error" && (
               <div className="analysis-error" role="alert">
                 <span className="eyebrow">A small pause</span>
-                <h2 className="serif">We couldn't finish the read.</h2>
+                <h2 className="serif">We couldn&apos;t finish the read.</h2>
                 <p>{error}</p>
                 <button className="button button-gold" onClick={reset}>Try another photo</button>
               </div>
@@ -168,41 +144,43 @@ export default function EvaluatePage() {
 
             {status === "complete" && result && (
               <div className="analysis-result" aria-live="polite">
-                <div className="analysis-head">
-                  <div>
-                    <p className="eyebrow">Read complete / {fileName}</p>
-                    <h2 className="serif">A new chapter<br /><em>starts here.</em></h2>
-                  </div>
-                  <span className="analysis-check" aria-label="Evaluation complete">✓</span>
-                </div>
+                {result.isFootwear ? (
+                  <>
+                    <div className="analysis-head">
+                      <div>
+                        <p className="eyebrow">Read complete / {fileName}</p>
+                        <h2 className="serif">A new chapter<br /><em>starts here.</em></h2>
+                      </div>
+                      <span className="analysis-check" aria-label="Evaluation complete">✓</span>
+                    </div>
 
-                <dl className="analysis-grid">
-                  <div>
-                    <dt>Brand name</dt>
-                    <dd>{result.brand || "Not identified"}</dd>
-                  </div>
-                  <div>
-                    <dt>Model name</dt>
-                    <dd>{result.model || "Not identified"}</dd>
-                  </div>
-                  <div>
-                    <dt>Condition</dt>
-                    <dd>{result.condition || "Not identified"}</dd>
-                  </div>
-                  <div className="analysis-offer">
-                    <dt>Estimated offer</dt>
-                    <dd>
-                      {result.returnValue != null && Number.isFinite(Number(result.returnValue))
-                        ? `$${Number(result.returnValue).toFixed(2)}`
-                        : "Unavailable"}
-                    </dd>
-                  </div>
-                </dl>
+                    <dl className="analysis-grid">
+                      <div>
+                        <dt>Brand name</dt>
+                        <dd>{result.brand || "Not identified"}</dd>
+                      </div>
+                      <div>
+                        <dt>Model name</dt>
+                        <dd>{result.model || "Not identified"}</dd>
+                      </div>
+                      <div>
+                        <dt>Condition</dt>
+                        <dd>{result.condition || "Not identified"}</dd>
+                      </div>
+                    </dl>
 
-                {result.notable && <p className="analysis-note">{result.notable}</p>}
+                    {result.notable && <p className="analysis-note">{result.notable}</p>}
+                  </>
+                ) : (
+                  <div className="analysis-error" role="status">
+                    <span className="eyebrow">Not footwear</span>
+                    <h2 className="serif">This isn&apos;t a shoe photo.</h2>
+                    <p>{result.message}</p>
+                  </div>
+                )}
 
                 <div className="button-row">
-                  <a className="button button-gold" href="/credit">Explore store credit</a>
+                  {result.isFootwear && <a className="button button-gold" href="/shop">Browse the archive</a>}
                   <button className="button button-light" onClick={reset}>Evaluate another pair</button>
                 </div>
               </div>
@@ -211,7 +189,7 @@ export default function EvaluatePage() {
 
           <p className="evaluator-note">
             <span aria-hidden="true">✳</span>
-            Your photo is sent to our AI provider for analysis. This is a considered estimate, not a promise.
+            Your photo is sent to our AI provider for identification. This is not authentication, a valuation, or a payout offer.
           </p>
         </div>
       </section>
@@ -236,7 +214,7 @@ export default function EvaluatePage() {
             <article>
               <span className="eyebrow">03 / Honesty</span>
               <h3 className="serif">Let wear tell its story.</h3>
-              <p>Keep scuffs and creases in frame for a more useful, realistic estimate.</p>
+              <p>Keep scuffs and creases in frame for a more useful condition assessment.</p>
             </article>
           </div>
         </div>

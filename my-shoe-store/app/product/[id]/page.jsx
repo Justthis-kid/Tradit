@@ -35,7 +35,7 @@ export default function ProductPage({ params }) {
     return (
       <section className="product-page container page-enter">
         <p className="eyebrow">The archive / unavailable</p>
-        <h1 className="serif page-title">We couldn't find <em>that pair.</em></h1>
+        <h1 className="serif page-title">We couldn&apos;t find <em>that pair.</em></h1>
         <p className="product-load-error" role="alert">{loadError}</p>
         <Link className="button button-gold" href="/shop">Back to the archive</Link>
       </section>

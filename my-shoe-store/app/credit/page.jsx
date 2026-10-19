@@ -1,35 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  readStoreCredit,
-  STORE_CREDIT_UPDATED_EVENT,
-} from "../../lib/store-credit";
 
 export default function CreditPage() {
-  const [credit, setCredit] = useState(0);
-  const [error, setError] = useState("");
-
-  const refreshCredit = useCallback(() => {
-    try {
-      setCredit(readStoreCredit());
-      setError("");
-    } catch (creditError) {
-      setError(creditError.message);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshCredit();
-    window.addEventListener("storage", refreshCredit);
-    window.addEventListener(STORE_CREDIT_UPDATED_EVENT, refreshCredit);
-    return () => {
-      window.removeEventListener("storage", refreshCredit);
-      window.removeEventListener(STORE_CREDIT_UPDATED_EVENT, refreshCredit);
-    };
-  }, [refreshCredit]);
-
   return (
     <section className="credit-page container page-enter">
       <header className="page-top">
@@ -38,19 +11,16 @@ export default function CreditPage() {
           <h1 className="serif page-title">Store <em>credit.</em></h1>
         </div>
         <p className="page-top-note">
-          A little more room for the next pair. Your balance starts at zero and grows when you
-          accept a trade-in offer.
+          A little more room for the next pair. Your balance starts at zero; trade-in offers and account-backed credit are not yet available.
         </p>
       </header>
-
-      {error && <p className="credit-error" role="alert">{error}</p>}
 
       <section className="credit-content" aria-label="Store credit balance">
         <div className="credit-card">
           <div className="credit-card-head">
             <div>
               <p className="eyebrow">Available credit</p>
-              <p className="credit-number" aria-live="polite">${credit.toFixed(2)}</p>
+              <p className="credit-number">$0.00</p>
             </div>
             <span className="credit-mark" aria-hidden="true">T</span>
           </div>
@@ -62,26 +32,17 @@ export default function CreditPage() {
 
         <div className="credit-details">
           <p className="eyebrow">Your next move</p>
-          <h2 className="serif">{credit > 0 ? "Find a pair for its next chapter." : "Start with a pair you love."}</h2>
+          <h2 className="serif">Start with a pair you love.</h2>
           <p>
-            {credit > 0
-              ? "Your available balance is ready to put toward a pair in the archive."
-              : "Evaluate a pre-owned pair to receive a conditional trade-in estimate. Credit is added only when you accept an offer."}
+            Photo evaluation currently identifies visible shoe details only. It does not create a trade-in offer or add store credit.
           </p>
           <div className="button-row">
-            <Link className="button button-gold" href={credit > 0 ? "/shop" : "/evaluate"}>
-              {credit > 0 ? "Shop the archive" : "Evaluate a pair"}
-            </Link>
-            <Link className="button button-light" href={credit > 0 ? "/evaluate" : "/shop"}>
-              {credit > 0 ? "Trade in a pair" : "Browse the archive"}
-            </Link>
+            <Link className="button button-gold" href="/evaluate">Identify a pair</Link>
+            <Link className="button button-light" href="/shop">Browse the archive</Link>
           </div>
         </div>
       </section>
-      <p className="credit-note">
-        Store credit is currently saved in this browser for the private beta. It is not yet
-        account-backed or redeemable at checkout.
-      </p>
+      <p className="credit-note">Account-backed store credit is not yet available.</p>
     </section>
   );
 }
