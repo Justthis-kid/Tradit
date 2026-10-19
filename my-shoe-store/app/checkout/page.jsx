@@ -2,7 +2,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { readCart } from "../../lib/cart";
+import { addStoreCredit } from "../../lib/store-credit";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState([]);
@@ -38,7 +40,11 @@ export default function CheckoutPage() {
         const res = await fetch("/api/scan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64, referencePrice: total || 100 })
+          body: JSON.stringify({
+            imageBase64: base64,
+            mimeType: file.type,
+            referencePrice: total || 100
+          })
         });
         const data = await res.json();
         if (!res.ok) {
@@ -61,8 +67,13 @@ export default function CheckoutPage() {
       return;
     }
     // Store credit flow: save to localStorage as 'storeCredit'
-    const credit = Number(localStorage.getItem("storeCredit") || 0) + Number(scanResult.returnValue);
-    localStorage.setItem("storeCredit", credit.toFixed(2));
+    let credit;
+    try {
+      credit = addStoreCredit(scanResult.returnValue);
+    } catch (creditError) {
+      setError(creditError.message);
+      return;
+    }
     // Clear cart as demo
     localStorage.removeItem("cart");
     alert(`Offer accepted. Store credit: $${credit.toFixed(2)}. Use it to buy on Tradit.`);
@@ -70,42 +81,95 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Checkout</h1>
+    <section className="checkout-page container page-enter">
+      <header className="page-top">
+        <div className="page-top-copy">
+          <p className="eyebrow">The archive / checkout</p>
+          <h1 className="serif page-title">Your next <em>move.</em></h1>
+        </div>
+        <p className="page-top-note">
+          Review your selection or explore a conditional trade-in estimate for a pair of your own.
+        </p>
+      </header>
 
-      <section style={{ marginTop: 12 }}>
-        <h3>Order summary</h3>
-        {cart.length === 0 && <div>Your cart is empty</div>}
-        {cart.map((i, idx) => (
-          <div key={idx}>{i.title} — ${i.price.toFixed(2)} × {i.qty}</div>
-        ))}
-        <h3>Total: ${total.toFixed(2)}</h3>
-      </section>
+      {error && <p className="checkout-error" role="alert">{error}</p>}
 
-      <section style={{ marginTop: 18 }}>
-        <h3>Sell / Resell a Shoe (AI Valuation)</h3>
-        <div style={{ color: "var(--muted)" }}>Upload a clear photo of the shoe. Tradit will analyze brand, model, condition, trend, and offer store credit up to 50% of original price.</div>
-
-        <input type="file" accept="image/*" onChange={handleFile} style={{ marginTop: 12 }} />
-        {fileName && <div>Selected: {fileName}</div>}
-        {loading && <div>Scanning…</div>}
-        {error && <div style={{ color: "red" }}>{error}</div>}
-
-        {scanResult && (
-          <div className="scan-result">
-            <h4>AI Valuation</h4>
-            <div><strong>Brand</strong>: {scanResult.brand ?? scanResult.scan?.brand ?? "Unknown"}</div>
-            <div><strong>Model</strong>: {scanResult.model ?? scanResult.scan?.model ?? "Unknown"}</div>
-            <div><strong>Condition</strong>: {scanResult.condition ?? scanResult.scan?.condition ?? "Unknown"}</div>
-            <div><strong>Trend Score</strong>: {scanResult.trendingScore ?? scanResult.scan?.trendingScore ?? "N/A"}</div>
-            <div><strong>Return Value (store credit)</strong>: ${Number(scanResult.returnValue ?? scanResult.scan?.returnValue ?? 0).toFixed(2)}</div>
-
-            <div style={{ marginTop: 12 }}>
-              <button className="btn primary" onClick={acceptOffer}>Accept Offer (Add store credit)</button>
-            </div>
+      <div className="checkout-grid">
+        <section className="checkout-order">
+          <div className="checkout-section-heading">
+            <p className="eyebrow">01 / Your selection</p>
+            <h2 className="serif">Order summary</h2>
           </div>
-        )}
-      </section>
-    </div>
+          {cart.length === 0 ? (
+            <div className="checkout-empty">
+              <p>Your bag is taking a breather.</p>
+              <Link className="text-link" href="/shop">Browse the archive</Link>
+            </div>
+          ) : (
+            <ul className="checkout-items">
+              {cart.map((item) => (
+                <li key={item.id}>
+                  <div>
+                    <p>{item.title}</p>
+                    {item.detail && <span>{item.detail}</span>}
+                    <span>Qty {item.qty}</span>
+                  </div>
+                  <strong>${(item.price * item.qty).toFixed(2)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="checkout-total">
+            <span>Subtotal</span>
+            <strong>${total.toFixed(2)}</strong>
+          </div>
+          <p className="checkout-fineprint">Shipping and applicable taxes are calculated at checkout.</p>
+        </section>
+
+        <section className="checkout-tradein">
+          <div className="checkout-section-heading">
+            <p className="eyebrow">02 / Your pair</p>
+            <h2 className="serif">Explore its next chapter.</h2>
+          </div>
+          <p className="checkout-intro">
+            Share a clear photo for a first look at the brand, model, visible condition, and a
+            conditional store-credit estimate.
+          </p>
+          <label className="checkout-upload" htmlFor="checkout-shoe-file">
+            <span className="eyebrow">Choose a shoe photo</span>
+            <input
+              id="checkout-shoe-file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFile}
+              aria-describedby="checkout-upload-help"
+            />
+            <span id="checkout-upload-help" className="checkout-upload-help">
+              JPEG, PNG, or WebP. A well-lit side view works best.
+            </span>
+          </label>
+          {fileName && <p className="checkout-filename">Selected / {fileName}</p>}
+          {loading && <p className="checkout-status" role="status" aria-live="polite">Taking a closer look…</p>}
+
+          {scanResult && (
+            <div className="checkout-evaluation">
+              <p className="eyebrow">First look / estimate</p>
+              <dl>
+                <div><dt>Brand name</dt><dd>{scanResult.brand}</dd></div>
+                <div><dt>Model name</dt><dd>{scanResult.model}</dd></div>
+                <div><dt>Condition</dt><dd>{scanResult.condition}</dd></div>
+                <div><dt>Estimated store credit</dt><dd>${Number(scanResult.returnValue).toFixed(2)}</dd></div>
+              </dl>
+              <p className="checkout-fineprint">
+                This photo-based estimate is conditional and is not a final authentication or payout offer.
+              </p>
+              <button className="button button-gold" onClick={acceptOffer}>
+                Accept estimate
+              </button>
+            </div>
+          )}
+        </section>
+      </div>
+    </section>
   );
 }

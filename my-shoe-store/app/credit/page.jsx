@@ -1,71 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  readStoreCredit,
+  STORE_CREDIT_UPDATED_EVENT,
+} from "../../lib/store-credit";
 
 export default function CreditPage() {
-  const [useCredit, setUseCredit] = useState(false);
+  const [credit, setCredit] = useState(0);
+  const [error, setError] = useState("");
 
-  const history = [
-    { label: "Credit from Mariner 86 sale", date: "Jun 14, 2024", amount: "+ $68.40", type: "in" },
-    { label: "Applied to Pace Runner 04", date: "May 29, 2024", amount: "− $22.00", type: "out" },
-    { label: "Welcome credit", date: "May 07, 2024", amount: "+ $10.00", type: "in" }
-  ];
+  const refreshCredit = useCallback(() => {
+    try {
+      setCredit(readStoreCredit());
+      setError("");
+    } catch (creditError) {
+      setError(creditError.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCredit();
+    window.addEventListener("storage", refreshCredit);
+    window.addEventListener(STORE_CREDIT_UPDATED_EVENT, refreshCredit);
+    return () => {
+      window.removeEventListener("storage", refreshCredit);
+      window.removeEventListener(STORE_CREDIT_UPDATED_EVENT, refreshCredit);
+    };
+  }, [refreshCredit]);
 
   return (
-    <section className="credit-layout">
-      <div className="credit-copy">
-        <p className="eyebrow" style={{ color: "var(--gold-dark)" }}>
-          Your exchange / wallet
+    <section className="credit-page container page-enter">
+      <header className="page-top">
+        <div className="page-top-copy">
+          <p className="eyebrow">The archive / your exchange</p>
+          <h1 className="serif page-title">Store <em>credit.</em></h1>
+        </div>
+        <p className="page-top-note">
+          A little more room for the next pair. Your balance starts at zero and grows when you
+          accept a trade-in offer.
         </p>
-        <h1 className="serif page-title">
-          Credit that<br />
-          <em>keeps moving.</em>
-        </h1>
-        <p>
-          Every good sale gives you a little more room to find the next pair. No expiry. No fuss.
-        </p>
-      </div>
+      </header>
 
-      <div className="credit-panel">
+      {error && <p className="credit-error" role="alert">{error}</p>}
+
+      <section className="credit-content" aria-label="Store credit balance">
         <div className="credit-card">
           <div className="credit-card-head">
             <div>
-              <p className="eyebrow gold-text">Available credit</p>
-              <p className="credit-number">$56.40</p>
+              <p className="eyebrow">Available credit</p>
+              <p className="credit-number" aria-live="polite">${credit.toFixed(2)}</p>
             </div>
-            <span className="gold-text">💳</span>
+            <span className="credit-mark" aria-hidden="true">T</span>
           </div>
-
           <div className="credit-card-bottom">
-            <span>Last updated just now</span>
-            <button
-              className={`toggle ${useCredit ? "active" : ""}`}
-              onClick={() => setUseCredit(!useCredit)}
-            >
-              {useCredit ? "Credit applied to next purchase" : "Tap to apply credit"}
-            </button>
+            <span className="eyebrow">Tradits / exchange balance</span>
+            <span>No expiry</span>
           </div>
         </div>
 
-        <div className="credit-history">
-          <p className="eyebrow">Recent movements</p>
-          <ul>
-            {history.map((item, i) => (
-              <li key={i} className={`credit-row credit-${item.type}`}>
-                <div>
-                  <p>{item.label}</p>
-                  <span className="eyebrow">{item.date}</span>
-                </div>
-                <span className="amount">{item.amount}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="credit-details">
+          <p className="eyebrow">Your next move</p>
+          <h2 className="serif">{credit > 0 ? "Find a pair for its next chapter." : "Start with a pair you love."}</h2>
+          <p>
+            {credit > 0
+              ? "Your available balance is ready to put toward a pair in the archive."
+              : "Evaluate a pre-owned pair to receive a conditional trade-in estimate. Credit is added only when you accept an offer."}
+          </p>
+          <div className="button-row">
+            <Link className="button button-gold" href={credit > 0 ? "/shop" : "/evaluate"}>
+              {credit > 0 ? "Shop the archive" : "Evaluate a pair"}
+            </Link>
+            <Link className="button button-light" href={credit > 0 ? "/evaluate" : "/shop"}>
+              {credit > 0 ? "Trade in a pair" : "Browse the archive"}
+            </Link>
+          </div>
         </div>
-
-        <p className="credit-note">
-          Credit is tied to your email and can be used on any future pair. No expiry, just good shoes.
-        </p>
-      </div>
+      </section>
+      <p className="credit-note">
+        Store credit is currently saved in this browser for the private beta. It is not yet
+        account-backed or redeemable at checkout.
+      </p>
     </section>
   );
 }

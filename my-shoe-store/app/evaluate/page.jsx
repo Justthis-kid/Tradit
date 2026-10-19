@@ -36,6 +36,7 @@ export default function EvaluatePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             imageBase64: reader.result.split(",")[1],
+            mimeType: file.type,
             referencePrice,
           }),
         });
@@ -71,7 +72,7 @@ export default function EvaluatePage() {
   }
 
   return (
-    <main className="page-enter">
+    <section className="page-enter">
       <section className="evaluate-layout container">
         <div className="evaluate-copy">
           <p className="eyebrow evaluate-eyebrow">The evaluator / private beta</p>
@@ -121,7 +122,7 @@ export default function EvaluatePage() {
                   id="shoe-file"
                   className="sr-only"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handleFileChange}
                   aria-describedby="upload-guidance"
                 />
@@ -177,15 +178,15 @@ export default function EvaluatePage() {
 
                 <dl className="analysis-grid">
                   <div>
-                    <dt>Brand</dt>
+                    <dt>Brand name</dt>
                     <dd>{result.brand || "Not identified"}</dd>
                   </div>
                   <div>
-                    <dt>Model</dt>
+                    <dt>Model name</dt>
                     <dd>{result.model || "Not identified"}</dd>
                   </div>
                   <div>
-                    <dt>Condition read</dt>
+                    <dt>Condition</dt>
                     <dd>{result.condition || "Not identified"}</dd>
                   </div>
                   <div className="analysis-offer">
@@ -240,6 +241,6 @@ export default function EvaluatePage() {
           </div>
         </div>
       </section>
-    </main>
+    </section>
   );
 }

@@ -1,123 +1,164 @@
-// app/api/scan/route.js
 import { createGeminiModel } from "../../../lib/gemini";
 
-/**
- * Heuristic parser: tries to extract keywords from AI text.
- * Also computes a trending score 0-100 based on keywords.
- */
-function analyzeTextForMetadata(text) {
-  const lower = (text || "").toLowerCase();
-  const metadata = {
-    brand: null,
-    model: null,
-    condition: null,
-    trendingScore: 30 // baseline
-  };
+const supportedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-  // Brand/model heuristics (very simple)
-  // Look for common separators like ":" or "brand" words
-  const brandMatch = lower.match(/brand[:\s]*([a-z0-9\- ]{2,40})/i);
-  if (brandMatch) metadata.brand = brandMatch[1].trim();
+function cleanText(value, maxLength, { sentence = false, fallback } = {}) {
+  if (typeof value !== "string") return fallback;
 
-  const modelMatch = lower.match(/model[:\s]*([a-z0-9\- ]{2,60})/i);
-  if (modelMatch) metadata.model = modelMatch[1].trim();
+  let text = value.replace(/\s+/g, " ").trim().replace(/^["'`]+|["'`]+$/g, "");
+  if (!text) return fallback;
 
-  // Condition heuristics
-  if (lower.includes("new") || lower.includes("brand new") || lower.includes("deadstock")) metadata.condition = "New";
-  else if (lower.includes("excellent") || lower.includes("mint")) metadata.condition = "Excellent";
-  else if (lower.includes("good") || lower.includes("lightly used")) metadata.condition = "Good";
-  else if (lower.includes("fair") || lower.includes("used")) metadata.condition = "Fair";
-  else if (lower.includes("worn") || lower.includes("heavily used")) metadata.condition = "Worn";
+  text = text.slice(0, maxLength).trim();
+  text = text.charAt(0).toLocaleUpperCase() + text.slice(1);
 
-  // Trend keywords
-  const trendBoosters = ["rare","limited","collab","exclusive","trending","popular","viral","hype","retro","vintage","iconic"];
-  for (const kw of trendBoosters) {
-    if (lower.includes(kw)) metadata.trendingScore += 8;
+  if (sentence && !/[.!?]$/.test(text)) {
+    text += ".";
   }
 
-  // Condition affects trend: new/excellent slightly higher
-  if (metadata.condition === "New" || metadata.condition === "Excellent") metadata.trendingScore += 6;
-  if (metadata.condition === "Worn") metadata.trendingScore -= 8;
-
-  // Clamp
-  metadata.trendingScore = Math.max(0, Math.min(100, metadata.trendingScore));
-  return metadata;
+  return text;
 }
 
-export async function POST(req) {
+const conditionDescriptions = {
+  new: "The shoe appears to be new",
+  excellent: "The shoe appears to be in excellent condition",
+  good: "The shoe appears to be in good condition",
+  fair: "The shoe appears to be in fair condition",
+  "heavily worn": "The shoe appears to be heavily worn",
+  "unable to assess": "The shoe's condition could not be assessed from this photo",
+};
+
+function parseAnalysis(text) {
+  const jsonText = text.trim().replace(/^```(?:json)?\s*|\s*```$/gi, "");
+  const analysis = JSON.parse(jsonText);
+  const conditionGrade =
+    typeof analysis.conditionGrade === "string"
+      ? analysis.conditionGrade.trim().toLowerCase()
+      : "unable to assess";
+  const conditionStart =
+    conditionDescriptions[conditionGrade] ?? conditionDescriptions["unable to assess"];
+  const cleanedConditionDetails = cleanText(analysis.conditionDetails, 180)
+    ?.replace(/^with\s+/i, "")
+    .replace(/[.!?]+$/, "");
+  const conditionDetails = cleanedConditionDetails
+    ? cleanedConditionDetails.charAt(0).toLocaleLowerCase() + cleanedConditionDetails.slice(1)
+    : "";
+
+  return {
+    brand: cleanText(analysis.brand, 80, {
+      fallback: "Unable to identify from this photo",
+    }),
+    model: cleanText(analysis.model, 100, {
+      fallback: "Unable to identify from this photo",
+    }),
+    condition: `${conditionStart}${conditionDetails && conditionGrade !== "unable to assess" ? `, with ${conditionDetails}` : ""}.`,
+    notable: cleanText(analysis.notable, 300, { sentence: true, fallback: null }),
+  };
+}
+
+function getTrendingScore(analysis) {
+  const text = `${analysis.brand} ${analysis.model} ${analysis.condition} ${analysis.notable ?? ""}`
+    .toLowerCase();
+  const trendBoosters = [
+    "rare",
+    "limited",
+    "collab",
+    "exclusive",
+    "trending",
+    "popular",
+    "viral",
+    "hype",
+    "retro",
+    "vintage",
+    "iconic",
+  ];
+  let score = 30;
+
+  for (const keyword of trendBoosters) {
+    if (text.includes(keyword)) score += 8;
+  }
+
+  if (/\b(new|excellent|mint)\b/.test(text)) score += 6;
+  if (/\b(worn|heavily used)\b/.test(text)) score -= 8;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function getConditionMultiplier(condition) {
+  const text = condition.toLowerCase();
+
+  if (/\b(new|excellent|mint)\b/.test(text)) return 0.35;
+  if (/\bgood\b/.test(text)) return 0.25;
+  if (/\bfair\b/.test(text)) return 0.18;
+  if (/\b(worn|heavily used)\b/.test(text)) return 0.1;
+  return 0.15;
+}
+
+export async function POST(request) {
   try {
-    const body = await req.json();
-    const imageBase64 = body?.imageBase64;
+    const body = await request.json();
+    const { imageBase64, mimeType } = body ?? {};
     const referencePrice = Number(body?.referencePrice ?? 0);
 
-    if (!imageBase64) {
-      return Response.json({ error: "Missing imageBase64 field in request body" }, { status: 400 });
+    if (typeof imageBase64 !== "string" || !imageBase64.trim()) {
+      return Response.json({ error: "A shoe photo is required." }, { status: 400 });
+    }
+
+    if (!supportedImageTypes.has(mimeType)) {
+      return Response.json(
+        { error: "Use a JPEG, PNG, or WebP shoe photo." },
+        { status: 400 },
+      );
+    }
+
+    if (!Number.isFinite(referencePrice) || referencePrice <= 0) {
+      return Response.json({ error: "A valid reference price is required." }, { status: 400 });
     }
 
     const model = createGeminiModel();
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { data: imageBase64, mimeType } },
+            {
+              text: `Identify the single shoe shown in this photo. Return only a JSON object with exactly these string fields: "brand", "model", "conditionGrade", "conditionDetails", and "notable".
 
-    // Ask Gemini to analyze the shoe and return a short JSON-like text
-    const prompt = [
-      {
-        inlineData: {
-          data: imageBase64,
-          mimeType: "image/jpeg"
-        }
-      },
-      `You are an expert sneaker appraiser. Analyze the shoe image and return a short plain-text description including brand, model, condition, and any notable features. Use short sentences.`
-    ];
-
-    const result = await model.generateContent(prompt);
+Rules:
+- Use the brand's and model's correctly capitalized names. Do not guess; use "Unable to identify from this photo" when the image does not support a confident identification.
+- Set "conditionGrade" to exactly one of: "new", "excellent", "good", "fair", "heavily worn", or "unable to assess". Choose the grade supported by visible wear; never infer condition from brand or model.
+- Write "conditionDetails" as a short descriptive phrase about visible wear (for example, "light creasing near the toe and mild outsole wear"), without a sentence or a final period. Use an empty string if there are no details or condition cannot be assessed.
+- Write "notable" as one concise, grammatical sentence about visible details, or an empty string if there are none.
+- Do not include markdown, estimates, or any text outside the JSON object.`,
+            },
+          ],
+        },
+      ],
+      generationConfig: { responseMimeType: "application/json" },
+    });
     const aiText = result?.response?.text?.() ?? "";
 
-    // Try to parse JSON if model returned JSON
-    let parsed = null;
+    let analysis;
     try {
-      parsed = JSON.parse(aiText);
+      analysis = parseAnalysis(aiText);
     } catch {
-      parsed = null;
+      return Response.json(
+        { error: "The shoe details could not be read. Please try a clearer photo." },
+        { status: 502 },
+      );
     }
 
-    // If parsed JSON exists and has fields, use them; otherwise heuristically parse aiText
-    const metaFromAI = parsed ?? analyzeTextForMetadata(aiText);
+    const trendingScore = getTrendingScore(analysis);
+    const trendMultiplier = 0.5 + trendingScore / 100;
+    const estimatedOffer = referencePrice * getConditionMultiplier(analysis.condition) * trendMultiplier;
+    const returnValue = Math.round(Math.min(estimatedOffer, referencePrice * 0.5) * 100) / 100;
 
-    // Compute trending score if not present
-    const trendingScore = metaFromAI.trendingScore ?? analyzeTextForMetadata(aiText).trendingScore;
-
-    // Compute return value: baseOffer = referencePrice * factor
-    // Factor derived from condition and trendingScore
-    // Condition multiplier
-    let conditionMultiplier = 0.15; // default 15% of price
-    const cond = (metaFromAI.condition || "").toLowerCase();
-    if (cond.includes("new") || cond.includes("excellent")) conditionMultiplier = 0.35;
-    else if (cond.includes("good")) conditionMultiplier = 0.25;
-    else if (cond.includes("fair")) conditionMultiplier = 0.18;
-    else if (cond.includes("worn")) conditionMultiplier = 0.10;
-
-    // Trend multiplier: scale trendingScore 0-100 to 0.5 -> 1.5 multiplier
-    const trendMultiplier = 0.5 + (trendingScore / 100) * 1.0; // between 0.5 and 1.5
-
-    let offer = referencePrice * conditionMultiplier * trendMultiplier;
-
-    // Cap offer at 50% of referencePrice
-    const cap = referencePrice * 0.5;
-    if (offer > cap) offer = cap;
-
-    // Round to 2 decimals
-    offer = Math.round(offer * 100) / 100;
-
-    const response = {
-      brand: metaFromAI.brand ?? null,
-      model: metaFromAI.model ?? null,
-      condition: metaFromAI.condition ?? null,
-      notable: parsed?.notable ?? null,
-      trendingScore,
-      returnValue: offer,
-      rawText: aiText
-    };
-
-    return Response.json(response);
-  } catch (err) {
-    return Response.json({ error: err?.message ?? String(err) }, { status: 500 });
+    return Response.json({ ...analysis, trendingScore, returnValue });
+  } catch (error) {
+    console.error("Shoe evaluation failed:", error);
+    return Response.json(
+      { error: "The shoe evaluation could not be completed. Please try again." },
+      { status: 500 },
+    );
   }
 }

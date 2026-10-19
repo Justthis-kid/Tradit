@@ -66,7 +66,10 @@ export default function ShopPage() {
 
         <div className="shop-controls">
           <label className="field-control">
-            <span aria-hidden="true">🔍</span>
+            <svg className="ui-icon search-field-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="10.8" cy="10.8" r="6.8" />
+              <path d="m16 16 4.2 4.2" />
+            </svg>
             <input
               aria-label="Search the archive"
               value={query}

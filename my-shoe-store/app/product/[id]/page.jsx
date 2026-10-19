@@ -1,56 +1,87 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addToCart } from "../../../lib/cart";
 
 export default function ProductPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const router = useRouter();
   const [product, setProduct] = useState(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
+    let active = true;
+
     fetch("/api/products")
-      .then((r) => r.json())
-      .then((list) => setProduct(list.find((p) => p.id === id)));
+      .then((response) => {
+        if (!response.ok) throw new Error("The archive is unavailable right now.");
+        return response.json();
+      })
+      .then((list) => {
+        if (active) setProduct(list.find((item) => item.id === id) ?? null);
+      })
+      .catch((error) => {
+        if (active) setLoadError(error.message);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
-  if (!product) return <div style={{ padding: 24 }}>Loading…</div>;
+  if (loadError) {
+    return (
+      <section className="product-page container page-enter">
+        <p className="eyebrow">The archive / unavailable</p>
+        <h1 className="serif page-title">We couldn't find <em>that pair.</em></h1>
+        <p className="product-load-error" role="alert">{loadError}</p>
+        <Link className="button button-gold" href="/shop">Back to the archive</Link>
+      </section>
+    );
+  }
+
+  if (!product) {
+    return (
+      <section className="product-page container page-enter" role="status" aria-live="polite">
+        <p className="eyebrow">The archive / finding your pair</p>
+        <h1 className="serif page-title">One moment <em>please.</em></h1>
+      </section>
+    );
+  }
 
   return (
-    <div style={{ padding: 24 }}>
-      <button className="button" onClick={() => router.back()}>
-        ← Back
+    <section className="product-page container page-enter">
+      <button className="button button-gold product-back" onClick={() => router.back()}>
+        <span aria-hidden="true">←</span> Back
       </button>
 
-      <div style={{ display: "flex", gap: 24, marginTop: 24 }}>
-        <img
-          src={product.image}
-          alt={product.name}
-          style={{
-            width: 420,
-            height: 360,
-            objectFit: "cover",
-            borderRadius: 12
-          }}
-        />
+      <section className="product-detail">
+        <div className="product-detail-image-wrap">
+          <img className="product-detail-image" src={product.image} alt={product.name} />
+          <span className="product-detail-stamp eyebrow">Condition checked / archive pair</span>
+        </div>
 
-        <div>
+        <div className="product-detail-copy">
+          <p className="eyebrow">The archive / considered pairs</p>
           <h1 className="serif">{product.name}</h1>
-          <p className="product-price">${product.price}</p>
+          <p className="product-detail-price">${Number(product.price).toFixed(2)}</p>
           <p className="product-story">{product.story}</p>
+          <div className="product-detail-rule">
+            <span className="eyebrow">A pair with more life in it.</span>
+            <p>Pre-owned, individually reviewed, and ready for its next chapter.</p>
+          </div>
 
-          <div className="button-row" style={{ marginTop: 24 }}>
-            <button className="button button-dark" onClick={() => addToCart(product)}>
+          <div className="button-row product-detail-actions">
+            <button className="button button-gold" onClick={() => addToCart(product)}>
               Add to bag
             </button>
-
-            <a className="button" href="/evaluate">
-              Evaluate a pair
-            </a>
+            <Link className="button button-light" href="/evaluate">Evaluate a pair</Link>
           </div>
+          <Link className="product-bag-link" href="/cart">View your bag <span aria-hidden="true">↗</span></Link>
         </div>
-      </div>
-    </div>
+      </section>
+    </section>
   );
 }
